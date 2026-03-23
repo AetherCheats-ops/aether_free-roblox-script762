@@ -1,41 +1,573 @@
-# Compiled Lua sources
-luac.out
-
-# luarocks build files
-*.src.rock
-*.zip
-*.tar.gz
-
-# Object files
-*.o
-*.os
-*.ko
-*.obj
-*.elf
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-*.def
-*.exp
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
+local Players = game:GetService(string.char((40 + 40), (324 / 3), (123 - 26), (213 - 92), (115 - 14), (186 - 72), (57 + 58)))
+local RunService = game:GetService(string.char((328 / 4), (190 - 73), (168 - 58), (41 + 42), (188 - 87), (342 / 3), (139 - 21), (52 + 53), (49 + 50), (116 - 15)))
+local UserInputService = game:GetService(string.char((170 / 2), (57 + 58), (50 + 51), (57 + 57), (91 - 18), (220 / 2), (128 - 16), (351 / 3), (58 + 58), (171 - 88), (196 - 95), (57 + 57), (59 + 59), (52 + 53), (198 / 2), (202 / 2)))
+local TweenService = game:GetService(string.char((158 - 74), (59 + 60), (50 + 51), (202 / 2), (55 + 55), (249 / 3), (303 / 3), (57 + 57), (202 - 84), (52 + 53), (297 / 3), (50 + 51)))
+local Workspace = game:GetService(string.char((174 / 2), (55 + 56), (57 + 57), (53 + 54), (345 / 3), (139 - 27), (162 - 65), (49 + 50), (404 / 4)))
+local Lighting = game:GetService(string.char((38 + 38), (210 / 2), (51 + 52), (52 + 52), (232 / 2), (163 - 58), (55 + 55), (206 / 2)))
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+local mouse = player:GetMouse()
+local Config = {
+Aimbot = false,
+AimPart = string.char((36 + 36), (303 / 3), (48 + 49), (50 + 50)),
+AimbotKey = Enum.UserInputType.MouseButton2,
+Smoothness = 1,
+Prediction = false,
+PredAmount = 0.15,
+WallCheck = false,
+Triggerbot = false,
+SilentAim = false,
+ShowFOV = false,
+FOVSize = (600 / 4),
+FOVThickness = 1,
+BoxEsp = false,
+CornerEsp = false,
+FilledBox = false,
+Box3D = false,
+SkeletonEsp = false,
+Snaplines = false,
+HeadDot = false,
+NameEsp = false,
+HealthEsp = false,
+DistanceEsp = false,
+WeaponEsp = false,
+OutlineEsp = true,
+Chams = false,
+ChamsFillTrans = 0.5,
+ChamsOutlineTrans = 0,
+HitboxExpander = false,
+HitboxSize = (105 - 95),
+ColorR = (272 - 17),
+ColorG = (320 / 4),
+ColorB = 0,
+EspColor = Color3.fromRGB((127 + 128), (125 - 45), 0),
+EspThickness = 1,
+Speed = false,
+SpeedValue = (104 - 54),
+JumpPower = false,
+JumpValue = (162 - 62),
+Fly = false,
+FlySpeed = ((200 - 51) - ((98 / 2) + (200 / 4))),
+Noclip = false,
+Spinbot = false,
+SpinSpeed = (59 - 29),
+InfJump = false,
+Bhop = false,
+Fullbright = false,
+FovChanger = false,
+FovValue = (60 + 60),
+InstaTP = false
+}
+local ESP_Cache = {}
+local ChamsFolder = Instance.new(string.char((140 / 2), (222 / 2), (128 - 20), (130 - 30), (303 / 3), (155 - 41)), game:GetService(string.char((268 / 4), (55 + 56), (57 + 57), (175 - 74), (123 - 52), (214 - 97), (52 + 53))))
+ChamsFolder.Name = string.char((32 + 33), (202 / 2), (58 + 58), (416 / 4), (202 / 2), (228 / 2), (268 / 4), (312 / 3), (114 - 17), (180 - 71), (57 + 58))
+local FOVCircle = Drawing.new(string.char((33 + 34), (315 / 3), (57 + 57), (198 / 2), (152 - 44), (121 - 20)))
+FOVCircle.Visible = false; FOVCircle.Filled = false; FOVCircle.Transparency = 1
+local function createObj(type, props)
+local obj = Drawing.new(type)
+for i, v in pairs(props) do obj[i] = v end
+return obj
+end
+local function createLine()
+return {
+Outline = createObj(string.char((105 - 29), (52 + 53), (193 - 83), (162 - 61)), {Thickness = 3, Color = Color3.new(0,0,0), Visible = false}),
+Inline = createObj(string.char((155 - 79), (315 / 3), (137 - 27), (202 / 2)), {Thickness = 1, Visible = false})
+}
+end
+local function updateLine(lineObj, vis, from, to, color, thick, useOutline)
+if vis and from and to then
+lineObj.Inline.Visible = true; lineObj.Inline.From = from; lineObj.Inline.To = to; lineObj.Inline.Color = color; lineObj.Inline.Thickness = thick
+lineObj.Outline.Visible = useOutline
+if useOutline then
+lineObj.Outline.From = from; lineObj.Outline.To = to; lineObj.Outline.Thickness = thick + 1.5
+end
+else
+lineObj.Inline.Visible = false; lineObj.Outline.Visible = false
+end
+end
+local AetherGui = Instance.new(string.char((118 - 35), (297 / 3), (189 - 75), (50 + 51), (50 + 51), (186 - 76), (104 - 33), (234 / 2), (420 / 4)), game:GetService(string.char((33 + 34), (55 + 56), (228 / 2), (50 + 51), (35 + 36), (468 / 4), (315 / 3))) or player:WaitForChild(string.char((92 - 12), (324 / 3), (194 / 2), (60 + 61), (50 + 51), (57 + 57), (98 - 27), (58 + 59), (52 + 53))))
+AetherGui.Name = string.char((32 + 33), (196 - 95), (58 + 58), (52 + 52), (303 / 3), (57 + 57))
+AetherGui.Enabled = true
+local Main = Instance.new(string.char((35 + 35), (456 / 4), (388 / 4), (436 / 4), (303 / 3)), AetherGui)
+Main.Size = UDim2.new(0, (1300 / 2), 0, ((1371 - 21) / 3))
+Main.Position = UDim2.new(0.5, -(1300 / 4), 0.5, -(675 / 3))
+Main.BackgroundColor3 = Color3.fromRGB((60 / 4), (44 - 29), ((20 + 20) - (75 / 3)))
+Main.Visible = true
+Instance.new(string.char((42 + 43), (36 + 37), (152 - 85), (444 / 4), (171 - 57), (330 / 3), (184 - 83), (125 - 11)), Main).CornerRadius = UDim.new(0, ((69 - 16) - (118 - 73)))
+local Glow = Instance.new(string.char((36 + 37), (54 + 55), (115 - 18), (51 + 52), (114 - 13), (111 - 35), (48 + 49), (49 + 49), (148 - 47), (54 + 54)), Main)
+Glow.BackgroundTransparency = 1
+Glow.Position = UDim2.new(0, -(80 - 60), 0, -(101 - 81))
+Glow.Size = UDim2.new(1, (160 / 4), 1, ((516 / 4) - (173 - 84)))
+Glow.ZIndex = 0
+Glow.Image = string.char((57 + 57), (294 / 3), (360 / 3), (291 / 3), (230 / 2), (133 - 18), (50 + 51), (58 + 58), (210 / 2), (128 - 28), (87 - 29), (94 / 2), (23 + 24), (20 + 20), (91 - 38), (96 / 2), (99 - 49), (102 - 46), (28 + 28), (26 + 27), (96 - 41), (122 - 73), (26 + 27), (27 + 28), (16 + 16), (22 + 23), (76 - 44), (27 + 28), (204 / 4), (105 - 64))
+Glow.ImageColor3 = Config.EspColor
+Glow.ScaleType = Enum.ScaleType.Slice
+Glow.SliceCenter = Rect.new((72 / 3), (12 + 12), (138 + 138), (341 - 65))
+local TopBar = Instance.new(string.char((35 + 35), (192 - 78), (154 - 57), (218 / 2), (202 / 2)), Main)
+TopBar.Size = UDim2.new(1, 0, 0, ((190 / 2) - (25 + 25)))
+TopBar.BackgroundTransparency = 1
+local Title = Instance.new(string.char((173 - 89), (129 - 28), (60 + 60), (208 - 92), (228 / 3), (48 + 49), (294 / 3), (50 + 51), (324 / 3)), TopBar)
+Title.Size = UDim2.new(1, -((67 - 57) + (59 - 49)), 1, 0)
+Title.Position = UDim2.new(0, (80 / 4), 0, 0)
+Title.Text = string.char((130 / 2), (138 / 2), (42 + 42), (126 - 54), (34 + 35), (328 / 4), (22 + 23), (280 / 4), (142 - 60), (138 / 2), (34 + 35), (135 / 3), (249 / 3), (147 - 80), (114 - 32), (219 / 3), (40 + 40), (42 + 42))
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = ((52 + 53) - (340 / 4))
+Title.TextColor3 = Config.EspColor
+Title.BackgroundTransparency = 1
+Title.TextXAlignment = Enum.TextXAlignment.Left
+local TabContainer = Instance.new(string.char((143 - 73), (125 - 11), (48 + 49), (436 / 4), (50 + 51)), Main)
+TabContainer.Size = UDim2.new(0, (640 / 4), 1, -(110 / 2))
+TabContainer.Position = UDim2.new(0, (40 / 4), 0, (86 - 41))
+TabContainer.BackgroundTransparency = 1
+local TabList = Instance.new(string.char((42 + 43), (146 / 2), (92 - 16), (186 - 81), (57 + 58), (176 - 60), (167 - 91), (184 - 87), (363 / 3), (161 - 50), (208 - 91), (58 + 58)), TabContainer)
+TabList.SortOrder = Enum.SortOrder.LayoutOrder
+TabList.Padding = UDim.new(0, (54 - 49))
+local ContentContainer = Instance.new(string.char((35 + 35), (456 / 4), (48 + 49), (327 / 3), (50 + 51)), Main)
+ContentContainer.Size = UDim2.new(1, -(760 / 4), 1, -(165 / 3))
+ContentContainer.Position = UDim2.new(0, (((205 + 206) - (25 + 26)) / 2), 0, (108 - 63))
+ContentContainer.BackgroundTransparency = 1
+local ActiveTab = nil
+local function createTab(name)
+local btn = Instance.new(string.char((252 / 3), (404 / 4), (360 / 3), (205 - 89), (264 / 4), (234 / 2), (348 / 3), (58 + 58), (222 / 2), (440 / 4)), TabContainer)
+btn.Size = UDim2.new(1, 0, 0, (70 / 2))
+btn.BackgroundColor3 = Color3.fromRGB((11 + 11), (44 / 2), ((36 + 37) - (107 - 56)))
+btn.Text = string.char((96 / 3), (65 - 33)) .. name
+btn.TextColor3 = Color3.fromRGB((100 + 100), (294 - 94), (100 + 100))
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = (70 - 56)
+btn.TextXAlignment = Enum.TextXAlignment.Left
+Instance.new(string.char((340 / 4), (36 + 37), (201 / 3), (444 / 4), (161 - 47), (440 / 4), (202 / 2), (200 - 86)), btn).CornerRadius = UDim.new(0, (83 - 77))
+local page = Instance.new(string.char((332 / 4), (49 + 50), (183 - 69), (210 - 99), (54 + 54), (54 + 54), (52 + 53), (220 / 2), (133 - 30), (140 / 2), (342 / 3), (194 / 2), (187 - 78), (50 + 51)), ContentContainer)
+page.Size = UDim2.new(1, 0, 1, 0)
+page.BackgroundTransparency = 1
+page.ScrollBarThickness = 2
+page.Visible = false
+page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local layout = Instance.new(string.char((101 - 16), (134 - 61), (38 + 38), (420 / 4), (130 - 15), (58 + 58), (113 - 37), (48 + 49), (60 + 61), (55 + 56), (58 + 59), (178 - 62)), page)
+layout.Padding = UDim.new(0, (16 / 2))
+btn.MouseButton1Click:Connect(function()
+for _, v in pairs(ContentContainer:GetChildren()) do if v:IsA(string.char((41 + 42), (192 - 93), (57 + 57), (173 - 62), (153 - 45), (54 + 54), (190 - 85), (55 + 55), (51 + 52), (280 / 4), (190 - 76), (160 - 63), (54 + 55), (151 - 50))) then v.Visible = false end end
+for _, v in pairs(TabContainer:GetChildren()) do
+if v:IsA(string.char((100 - 16), (140 - 39), (360 / 3), (58 + 58), (123 - 57), (58 + 59), (58 + 58), (464 / 4), (55 + 56), (330 / 3))) then TweenService:Create(v, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB((600 / 3), (400 / 2), (100 + 100)), BackgroundColor3 = Color3.fromRGB(((22 + 22) / 2), ((48 + 48) - (148 / 2)), (66 / 3))}):Play() end
+end
+page.Visible = true
+TweenService:Create(btn, TweenInfo.new(0.2), {TextColor3 = Config.EspColor, BackgroundColor3 = Color3.fromRGB((45 - 10), ((48 / 4) + (39 / 3)), ((36 / 3) + (6 + 7)))}):Play()
+end)
+if not ActiveTab then ActiveTab = btn; page.Visible = true; btn.TextColor3 = Config.EspColor end
+return page
+end
+local function addToggle(page, text, flag)
+local frame = Instance.new(string.char((280 / 4), (57 + 57), (184 - 87), (327 / 3), (187 - 86)), page)
+frame.Size = UDim2.new(1, -(30 / 3), 0, ((162 - 43) - (168 / 2)))
+frame.BackgroundColor3 = Color3.fromRGB(((336 / 4) - (112 / 2)), (14 + 14), (14 + 14))
+Instance.new(string.char((42 + 43), (36 + 37), (268 / 4), (444 / 4), (57 + 57), (220 / 2), (404 / 4), (228 / 2)), frame).CornerRadius = UDim.new(0, ((9 + 9) / 3))
+local lbl = Instance.new(string.char((336 / 4), (303 / 3), (187 - 67), (132 - 16), (116 - 40), (48 + 49), (294 / 3), (50 + 51), (54 + 54)), frame)
+lbl.Size = UDim2.new(1, -(30 + 30), 1, 0); lbl.Position = UDim2.new(0, ((44 - 39) + (20 / 4)), 0, 0); lbl.Text = text
+lbl.TextColor3 = Color3.fromRGB((325 - 70), (127 + 128), (1020 / 4)); lbl.Font = Enum.Font.GothamSemibold
+lbl.TextSize = (94 - 81); lbl.BackgroundTransparency = 1; lbl.TextXAlignment = Enum.TextXAlignment.Left
+local btn = Instance.new(string.char((42 + 42), (166 - 65), (480 / 4), (348 / 3), (33 + 33), (468 / 4), (58 + 58), (58 + 58), (55 + 56), (194 - 84)), frame)
+btn.Size = UDim2.new(0, (20 + 20), 0, (80 / 4)); btn.Position = UDim2.new(1, -((103 - 78) + (50 / 2)), 0.5, -(24 - 14))
+btn.BackgroundColor3 = Color3.fromRGB((136 - 91), (90 / 2), ((213 - 87) - (324 / 4))); btn.Text = ""
+Instance.new(string.char((340 / 4), (146 / 2), (155 - 88), (444 / 4), (57 + 57), (440 / 4), (134 - 33), (160 - 46)), btn).CornerRadius = UDim.new(1, 0)
+local circle = Instance.new(string.char((35 + 35), (163 - 49), (388 / 4), (218 / 2), (50 + 51)), btn)
+circle.Size = UDim2.new(0, (8 + 8), 0, (48 / 3)); circle.Position = UDim2.new(0, 2, 0.5, -(57 - 49))
+circle.BackgroundColor3 = Color3.fromRGB((276 - 76), (271 - 71), (100 + 100))
+Instance.new(string.char((42 + 43), (219 / 3), (134 / 2), (55 + 56), (456 / 4), (440 / 4), (50 + 51), (456 / 4)), circle).CornerRadius = UDim.new(1, 0)
+btn.MouseButton1Click:Connect(function()
+Config[flag] = not Config[flag]
+if Config[flag] then
+TweenService:Create(circle, TweenInfo.new(0.2), {Position = UDim2.new(1, -(54 / 3), 0.5, -(4 + 4)), BackgroundColor3 = Color3.fromRGB((346 - 91), ((382 + 383) / 3), (127 + 128))}):Play()
+TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Config.EspColor}):Play()
+else
+TweenService:Create(circle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -((160 - 73) - (158 - 79))), BackgroundColor3 = Color3.fromRGB(((400 / 4) + ((198 - 61) - (74 / 2))), (298 - 98), ((400 / 4) + (300 / 3)))}):Play()
+TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB((90 - 45), ((273 - 93) / (8 / 2)), (103 - 58))}):Play()
+end
+end)
+end
+local function addSlider(page, text, flag, min, max)
+local frame = Instance.new(string.char((280 / 4), (57 + 57), (48 + 49), (327 / 3), (185 - 84)), page)
+frame.Size = UDim2.new(1, -(95 - 85), 0, ((37 + 37) - (12 + 12))); frame.BackgroundColor3 = Color3.fromRGB((14 + 14), (48 - 20), (74 - 46))
+Instance.new(string.char((42 + 43), (85 - 12), (84 - 17), (55 + 56), (145 - 31), (220 / 2), (202 / 2), (57 + 57)), frame).CornerRadius = UDim.new(0, (3 + 3))
+local lbl = Instance.new(string.char((252 / 3), (50 + 51), (240 / 2), (58 + 58), (105 - 29), (388 / 4), (49 + 49), (173 - 72), (324 / 3)), frame)
+lbl.Size = UDim2.new(1, -(10 + 10), 0, (40 - 20)); lbl.Position = UDim2.new(0, (59 - 49), 0, (2 + 3))
+lbl.Text = text .. string.char((152 - 94), (96 / 3)) .. Config[flag]; lbl.TextColor3 = Color3.fromRGB((336 - 81), (510 / 2), (1020 / 4))
+lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = ((141 - 72) - ((41 + 42) - (108 / 4))); lbl.BackgroundTransparency = 1; lbl.TextXAlignment = Enum.TextXAlignment.Left
+local sliderBg = Instance.new(string.char((102 - 18), (404 / 4), (480 / 4), (348 / 3), (33 + 33), (172 - 55), (202 - 86), (143 - 27), (55 + 56), (55 + 55)), frame)
+sliderBg.Size = UDim2.new(1, -((155 - 75) / (16 / 4)), 0, (3 + 3)); sliderBg.Position = UDim2.new(0, (30 / 3), 0, (16 + 16))
+sliderBg.BackgroundColor3 = Color3.fromRGB((90 / 2), (22 + 23), (135 / 3)); sliderBg.Text = ""
+Instance.new(string.char((340 / 4), (219 / 3), (33 + 34), (55 + 56), (57 + 57), (55 + 55), (50 + 51), (57 + 57)), sliderBg).CornerRadius = UDim.new(1, 0)
+local fill = Instance.new(string.char((137 - 67), (57 + 57), (194 / 2), (218 / 2), (50 + 51)), sliderBg)
+fill.Size = UDim2.new((Config[flag]-min)/(max-min), 0, 1, 0); fill.BackgroundColor3 = Config.EspColor
+Instance.new(string.char((174 - 89), (36 + 37), (112 - 45), (55 + 56), (342 / 3), (151 - 41), (150 - 49), (57 + 57)), fill).CornerRadius = UDim.new(1, 0)
+local dragging = false
+sliderBg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
+UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+UserInputService.InputChanged:Connect(function(i)
+if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+local pct = math.clamp((i.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+local val = math.floor(min + (max - min) * pct)
+Config[flag] = val
+fill.Size = UDim2.new(pct, 0, 1, 0)
+lbl.Text = text .. string.char((29 + 29), (16 + 16)) .. val
+if flag == string.char((134 / 2), (55 + 56), (216 / 2), (55 + 56), (146 - 32), (41 + 41)) or flag == string.char((134 / 2), (222 / 2), (324 / 3), (145 - 34), (189 - 75), (35 + 36)) or flag == string.char((33 + 34), (151 - 40), (145 - 37), (444 / 4), (159 - 45), (99 - 33)) then
+Config.EspColor = Color3.fromRGB(Config.ColorR, Config.ColorG, Config.ColorB)
+Title.TextColor3 = Config.EspColor
+Glow.ImageColor3 = Config.EspColor
+end
+end
+end)
+end
+local tAim = createTab(string.char((130 / 2), (52 + 53), (54 + 55), (196 / 2), (163 - 52), (464 / 4)))
+local tVis = createTab(string.char((344 / 4), (121 - 16), (460 / 4), (148 - 31), (291 / 3), (54 + 54), (57 + 58)))
+local tInfo = createTab(string.char((33 + 34), (161 - 50), (156 - 48), (444 / 4), (228 / 2), (460 / 4)))
+local tExp = createTab(string.char((34 + 35), (240 / 2), (448 / 4), (129 - 21), (185 - 74), (52 + 53), (58 + 58), (345 / 3)))
+local tWorld = createTab(string.char((174 / 2), (333 / 3), (135 - 21), (54 + 54), (200 / 2), (180 / 4), (38 + 39), (162 - 57), (175 - 60), (197 - 98)))
+addToggle(tAim, string.char((276 / 4), (55 + 55), (291 / 3), (49 + 49), (54 + 54), (50 + 51), (16 + 16), (127 - 62), (52 + 53), (327 / 3), (108 - 10), (185 - 74), (232 / 2)), string.char((132 - 67), (182 - 77), (218 / 2), (143 - 45), (146 - 35), (232 / 2)))
+addToggle(tAim, string.char((149 - 62), (122 - 25), (167 - 59), (141 - 33), (122 - 90), (33 + 34), (312 / 3), (185 - 84), (49 + 50), (428 / 4), (127 - 95), (120 / 3), (43 + 43), (210 / 2), (151 - 36), (210 / 2), (294 / 3), (324 / 3), (120 - 19), (16 + 16), (158 / 2), (440 / 4), (181 - 73), (173 - 52), (102 - 61)), string.char((100 - 13), (48 + 49), (432 / 4), (54 + 54), (33 + 34), (52 + 52), (50 + 51), (49 + 50), (146 - 39)))
+addToggle(tAim, string.char((40 + 40), (57 + 57), (404 / 4), (300 / 3), (315 / 3), (198 / 2), (232 / 2), (52 + 53), (55 + 56), (55 + 55)), string.char((40 + 40), (160 - 46), (50 + 51), (157 - 57), (420 / 4), (135 - 36), (168 - 52), (52 + 53), (185 - 74), (55 + 55)))
+addSlider(tAim, string.char((122 - 39), (436 / 4), (444 / 4), (158 - 47), (58 + 58), (52 + 52), (220 / 2), (120 - 19), (345 / 3), (57 + 58), (96 / 3), (102 - 62), (123 - 74), (30 + 31), (41 + 42), (440 / 4), (291 / 3), (148 - 36), (22 + 22), (44 - 12), (67 - 18), (144 / 3), (149 - 88), (168 - 85), (327 / 3), (55 + 56), (333 / 3), (211 - 95), (52 + 52), (101 - 60)), string.char((41 + 42), (54 + 55), (222 / 2), (333 / 3), (150 - 34), (52 + 52), (220 / 2), (176 - 75), (201 - 86), (57 + 58)), 1, (99 - 89))
+addToggle(tAim, string.char((169 - 85), (160 - 46), (210 / 2), (51 + 52), (51 + 52), (172 - 71), (141 - 27), (49 + 49), (55 + 56), (464 / 4)), string.char((151 - 67), (342 / 3), (315 / 3), (51 + 52), (164 - 61), (50 + 51), (57 + 57), (294 / 3), (333 / 3), (58 + 58)))
+addToggle(tAim, string.char((249 / 3), (52 + 52), (206 - 95), (238 / 2), (64 - 32), (81 - 11), (316 / 4), (43 + 43), (96 / 3), (100 - 33), (52 + 53), (456 / 4), (49 + 50), (54 + 54), (202 / 2)), string.char((41 + 42), (52 + 52), (55 + 56), (59 + 60), (35 + 35), (158 / 2), (344 / 4)))
+addSlider(tAim, string.char((139 - 69), (158 / 2), (172 - 86), (16 + 16), (249 / 3), (315 / 3), (61 + 61), (50 + 51)), string.char((112 - 42), (158 / 2), (108 - 22), (41 + 42), (52 + 53), (61 + 61), (50 + 51)), ((273 / 3) - (116 - 35)), ((4000 / 4) / 2))
+addToggle(tVis, string.char((132 / 2), (158 - 47), (210 - 90), (64 - 32), (34 + 35), (126 - 43), (160 / 2), (95 - 63), (80 / 2), (118 - 68), (204 / 3), (164 / 4)), string.char((143 - 77), (222 / 2), (480 / 4), (276 / 4), (57 + 58), (336 / 3)))
+addToggle(tVis, string.char((33 + 34), (222 / 2), (57 + 57), (178 - 68), (122 - 21), (228 / 2), (128 / 4), (198 / 3), (55 + 56), (480 / 4)), string.char((159 - 92), (222 / 2), (183 - 69), (220 / 2), (50 + 51), (228 / 2), (276 / 4), (130 - 15), (177 - 65)))
+addToggle(tVis, string.char((159 - 89), (420 / 4), (165 - 57), (128 - 20), (404 / 4), (50 + 50), (64 / 2), (113 - 47), (149 - 38), (360 / 3)), string.char((140 / 2), (52 + 53), (54 + 54), (179 - 71), (172 - 71), (113 - 13), (89 - 23), (333 / 3), (204 - 84)))
+addToggle(tVis, string.char((25 + 26), (90 - 22), (128 / 4), (33 + 33), (444 / 4), (199 - 79), (16 + 16), (276 / 4), (41 + 42), (133 - 53)), string.char((33 + 33), (55 + 56), (146 - 26), (25 + 26), (204 / 3)))
+addToggle(tVis, string.char((41 + 42), (53 + 54), (188 - 87), (54 + 54), (50 + 51), (232 / 2), (55 + 56), (220 / 2), (130 - 98), (207 / 3), (138 - 55), (40 + 40), (91 - 59), (120 / 3), (246 / 3), (162 / 3), (44 - 12), (19 + 19), (128 / 4), (41 + 41), (196 / 4), (26 + 27), (82 / 2)), string.char((41 + 42), (53 + 54), (141 - 40), (432 / 4), (131 - 30), (232 / 2), (183 - 72), (220 / 2), (34 + 35), (345 / 3), (154 - 42)))
+addToggle(tVis, string.char((147 - 64), (330 / 3), (180 - 83), (448 / 4), (54 + 54), (210 / 2), (55 + 55), (176 - 75), (230 / 2)), string.char((118 - 35), (55 + 55), (48 + 49), (153 - 41), (216 / 2), (52 + 53), (135 - 25), (50 + 51), (345 / 3)))
+addToggle(tVis, string.char((144 / 2), (200 - 99), (116 - 19), (400 / 4), (128 / 4), (140 - 72), (144 - 33), (144 - 28)), string.char((144 / 2), (191 - 90), (291 / 3), (161 - 61), (34 + 34), (141 - 30), (58 + 58)))
+addToggle(tVis, string.char((105 - 25), (181 - 73), (48 + 49), (60 + 61), (202 / 2), (208 - 94), (90 / 2), (201 / 3), (52 + 52), (48 + 49), (218 / 2), (57 + 58)), string.char((87 - 20), (52 + 52), (48 + 49), (436 / 4), (460 / 4)))
+addToggle(tVis, string.char((156 / 2), (190 - 93), (54 + 55), (202 / 2), (128 / 4), (207 / 3), (41 + 42), (160 / 2)), string.char((234 / 3), (48 + 49), (436 / 4), (50 + 51), (34 + 35), (345 / 3), (160 - 48)))
+addToggle(tVis, string.char((36 + 36), (202 / 2), (130 - 33), (152 - 44), (172 - 56), (208 / 2), (96 / 3), (34 + 35), (332 / 4), (160 / 2)), string.char((36 + 36), (115 - 14), (194 / 2), (54 + 54), (169 - 53), (312 / 3), (207 / 3), (191 - 76), (129 - 17)))
+addToggle(tVis, string.char((34 + 34), (131 - 26), (132 - 17), (464 / 4), (48 + 49), (140 - 30), (396 / 4), (142 - 41), (16 + 16), (207 / 3), (41 + 42), (40 + 40)), string.char((34 + 34), (52 + 53), (125 - 10), (232 / 2), (169 - 72), (55 + 55), (396 / 4), (50 + 51), (138 / 2), (57 + 58), (56 + 56)))
+addToggle(tVis, string.char((43 + 44), (303 / 3), (48 + 49), (448 / 4), (122 - 11), (440 / 4), (128 / 4), (34 + 35), (41 + 42), (40 + 40)), string.char((43 + 44), (404 / 4), (291 / 3), (194 - 82), (137 - 26), (55 + 55), (34 + 35), (156 - 41), (56 + 56)))
+addToggle(tVis, string.char((142 - 73), (249 / 3), (155 - 75), (128 / 4), (39 + 40), (151 - 34), (204 - 88), (145 - 37), (52 + 53), (182 - 72), (404 / 4), (148 - 33)), string.char((316 / 4), (234 / 2), (58 + 58), (154 - 46), (52 + 53), (55 + 55), (303 / 3), (34 + 35), (202 - 87), (224 / 2)))
+addSlider(tVis, string.char((276 / 4), (142 - 59), (91 - 11), (16 + 16), (147 - 63), (145 - 41), (134 - 29), (136 - 37), (53 + 54), (141 - 31), (50 + 51), (230 / 2), (174 - 59)), string.char((105 - 36), (57 + 58), (56 + 56), (168 / 2), (208 / 2), (420 / 4), (49 + 50), (168 - 61), (220 / 2), (200 - 99), (460 / 4), (213 - 98)), 1, (10 / 2))
+addSlider(tInfo, string.char((136 - 67), (41 + 42), (111 - 31), (16 + 16), (41 + 41), (202 / 2), (146 - 46), (96 / 3), (160 / 4), (41 + 41), (213 / 3), (33 + 33), (58 - 17)), string.char((33 + 34), (132 - 21), (216 / 2), (198 - 87), (456 / 4), (112 - 30)), 0, (286 - 31))
+addSlider(tInfo, string.char((138 / 2), (168 - 85), (40 + 40), (56 - 24), (35 + 36), (57 + 57), (202 / 2), (202 / 2), (440 / 4), (75 - 43), (134 - 94), (149 - 67), (84 - 13), (33 + 33), (123 / 3)), string.char((33 + 34), (162 - 51), (189 - 81), (161 - 50), (342 / 3), (35 + 36)), 0, ((364 - 20) - (44 + 45)))
+addSlider(tInfo, string.char((126 - 57), (132 - 49), (240 / 3), (42 - 10), (97 - 31), (121 - 13), (157 - 40), (196 - 95), (96 / 3), (160 / 4), (328 / 4), (35 + 36), (33 + 33), (64 - 23)), string.char((134 / 2), (55 + 56), (324 / 3), (55 + 56), (57 + 57), (33 + 33)), 0, (127 + 128))
+addToggle(tExp, string.char((216 / 3), (52 + 53), (464 / 4), (392 / 4), (55 + 56), (217 - 97), (16 + 16), (132 - 63), (211 - 91), (448 / 4), (291 / 3), (153 - 43), (50 + 50), (50 + 51), (342 / 3), (16 + 16), (160 / 4), (108 - 36), (58 + 59), (51 + 52), (50 + 51), (64 / 2), (138 / 2), (220 / 2), (404 / 4), (140 - 31), (52 + 53), (50 + 51), (57 + 58), (20 + 21)), string.char((36 + 36), (52 + 53), (141 - 25), (147 - 49), (222 / 2), (360 / 3), (123 - 54), (60 + 60), (448 / 4), (190 - 93), (55 + 55), (140 - 40), (134 - 33), (57 + 57)))
+addSlider(tExp, string.char((288 / 4), (204 - 99), (58 + 58), (165 - 67), (55 + 56), (60 + 60), (56 - 24), (166 / 2), (420 / 4), (61 + 61), (139 - 38)), string.char((36 + 36), (52 + 53), (348 / 3), (49 + 49), (222 / 2), (360 / 3), (166 / 2), (420 / 4), (161 - 39), (197 - 96)), 2, (100 / 2))
+addToggle(tExp, string.char((261 / 3), (125 - 28), (54 + 54), (53 + 54), (249 / 3), (172 - 60), (114 - 13), (404 / 4), (122 - 22)), string.char((134 - 51), (175 - 63), (50 + 51), (142 - 41), (300 / 3)))
+addSlider(tExp, string.char((249 / 3), (336 / 3), (113 - 12), (50 + 51), (50 + 50), (87 - 55), (43 + 43), (143 - 46), (165 - 57), (468 / 4), (404 / 4)), string.char((249 / 3), (224 / 2), (404 / 4), (50 + 51), (300 / 3), (43 + 43), (126 - 29), (153 - 45), (139 - 22), (50 + 51)), (8 + 8), (125 + 125))
+addToggle(tExp, string.char((151 - 77), (145 - 28), (54 + 55), (56 + 56), (129 - 49), (134 - 23), (476 / 4), (303 / 3), (228 / 2)), string.char((37 + 37), (58 + 59), (218 / 2), (145 - 33), (160 / 2), (444 / 4), (59 + 60), (50 + 51), (228 / 2)))
+addSlider(tExp, string.char((222 / 3), (129 - 12), (436 / 4), (224 / 2), (85 - 53), (43 + 43), (166 - 69), (54 + 54), (209 - 92), (50 + 51)), string.char((222 / 3), (468 / 4), (128 - 19), (224 / 2), (258 / 3), (129 - 32), (324 / 3), (468 / 4), (303 / 3)), (127 - 77), ((62 + 63) + (375 / 3)))
+addToggle(tExp, string.char((92 - 22), (216 / 2), (242 / 2)), string.char((280 / 4), (432 / 4), (484 / 4)))
+addSlider(tExp, string.char((210 / 3), (324 / 3), (484 / 4), (128 / 4), (41 + 42), (56 + 56), (127 - 26), (50 + 51), (113 - 13)), string.char((80 - 10), (54 + 54), (60 + 61), (249 / 3), (188 - 76), (193 - 92), (202 / 2), (400 / 4)), (5 + 5), (313 - 63))
+addToggle(tExp, string.char((39 + 39), (205 - 94), (396 / 4), (324 / 3), (420 / 4), (150 - 38)), string.char((312 / 4), (55 + 56), (49 + 50), (54 + 54), (148 - 43), (448 / 4)))
+addToggle(tExp, string.char((41 + 42), (191 - 79), (196 - 91), (220 / 2), (49 + 49), (444 / 4), (181 - 65)), string.char((132 - 49), (336 / 3), (210 / 2), (220 / 2), (392 / 4), (208 - 97), (232 / 2)))
+addToggle(tExp, string.char((168 - 95), (185 - 75), (148 - 46), (52 + 53), (156 - 46), (160 - 55), (58 + 58), (404 / 4), (16 + 16), (37 + 37), (202 - 85), (218 / 2), (224 / 2)), string.char((36 + 37), (55 + 55), (51 + 51), (222 / 3), (58 + 59), (54 + 55), (185 - 73)))
+addToggle(tExp, string.char((264 / 4), (177 - 60), (330 / 3), (220 / 2), (60 + 61), (16 + 16), (36 + 36), (55 + 56), (179 - 67), (16 + 16), (120 / 3), (81 - 15), (416 / 4), (55 + 56), (56 + 56), (20 + 21)), string.char((33 + 33), (52 + 52), (55 + 56), (147 - 35)))
+addToggle(tWorld, string.char((219 / 3), (330 / 3), (176 - 61), (348 / 3), (154 - 57), (16 + 16), (158 - 74), (112 - 32), (50 - 18), (120 / 3), (38 + 38), (50 + 51), (187 - 85), (58 + 58), (73 - 41), (268 / 4), (138 - 30), (210 / 2), (49 + 50), (214 / 2), (98 - 66), (139 - 78), (16 + 16), (183 - 99), (240 / 3), (109 - 68)), string.char((146 / 2), (148 - 38), (57 + 58), (58 + 58), (388 / 4), (113 - 29), (160 / 2)))
+addToggle(tWorld, string.char((35 + 35), (58 + 59), (127 - 19), (54 + 54), (49 + 49), (57 + 57), (52 + 53), (51 + 52), (416 / 4), (348 / 3), (16 + 16), (54 - 14), (234 / 3), (176 - 65), (115 - 83), (41 + 42), (129 - 25), (48 + 49), (50 + 50), (139 - 28), (238 / 2), (230 / 2), (79 - 32), (39 + 39), (132 - 27), (412 / 4), (416 / 4), (189 - 73), (65 - 24)), string.char((137 - 67), (58 + 59), (54 + 54), (167 - 59), (119 - 21), (57 + 57), (315 / 3), (51 + 52), (312 / 3), (127 - 11)))
+addToggle(tWorld, string.char((268 / 4), (48 + 49), (327 / 3), (50 + 51), (193 - 79), (388 / 4), (64 / 2), (140 / 2), (316 / 4), (43 + 43), (16 + 16), (122 - 55), (153 - 49), (388 / 4), (55 + 55), (206 / 2), (161 - 60), (57 + 57)), string.char((140 / 2), (444 / 4), (236 / 2), (125 - 58), (181 - 77), (165 - 68), (220 / 2), (51 + 52), (50 + 51), (150 - 36)))
+addSlider(tWorld, string.char((268 / 4), (123 - 26), (180 - 71), (303 / 3), (57 + 57), (48 + 49), (96 / 3), (140 / 2), (152 - 73), (172 / 2), (16 + 16), (258 / 3), (126 - 29), (432 / 4), (468 / 4), (303 / 3)), string.char((35 + 35), (333 / 3), (354 / 3), (43 + 43), (48 + 49), (54 + 54), (58 + 59), (50 + 51)), (140 / 2), (360 / 3))
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+if gameProcessed then return end
+if input.KeyCode == Enum.KeyCode.Insert then
+Main.Visible = not Main.Visible
+end
+end)
+local dragToggle, dragStart, startPos
+TopBar.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 then dragToggle = true; dragStart = input.Position; startPos = Main.Position end
+end)
+UserInputService.InputChanged:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseMovement and dragToggle then
+local delta = input.Position - dragStart
+Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+end)
+UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragToggle = false end end)
+local isFlying = false
+local flyBv, flyBg
+local function toggleFly()
+local char = player.Character
+if Config.Fly and char and char:FindFirstChild(string.char((216 / 3), (191 - 74), (436 / 4), (388 / 4), (220 / 2), (136 - 25), (199 - 94), (200 / 2), (178 - 96), (153 - 42), (55 + 56), (232 / 2), (40 + 40), (111 - 14), (456 / 4), (213 - 97))) then
+if not isFlying then
+isFlying = true
+flyBg = Instance.new(string.char((33 + 33), (444 / 4), (50 + 50), (484 / 4), (284 / 4), (60 + 61), (149 - 35), (444 / 4)), char.HumanoidRootPart); flyBg.P = 9e4; flyBg.maxTorque = Vector3.new(9e9, 9e9, 9e9); flyBg.cframe = char.HumanoidRootPart.CFrame
+flyBv = Instance.new(string.char((33 + 33), (333 / 3), (50 + 50), (148 - 27), (43 + 43), (303 / 3), (197 - 89), (55 + 56), (49 + 50), (315 / 3), (464 / 4), (242 / 2)), char.HumanoidRootPart); flyBv.velocity = Vector3.new(0, 0, 0); flyBv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+char.Humanoid.PlatformStand = true
+end
+else
+isFlying = false
+if flyBg then flyBg:Destroy() end; if flyBv then flyBv:Destroy() end
+if char and char:FindFirstChild(string.char((36 + 36), (151 - 34), (54 + 55), (48 + 49), (185 - 75), (160 - 49), (420 / 4), (50 + 50))) then char.Humanoid.PlatformStand = false end
+end
+end
+local aiming = false
+UserInputService.InputBegan:Connect(function(i, p)
+if not p and i.UserInputType == Config.AimbotKey then aiming = true end
+if not p and Config.InstaTP and i.UserInputType == Enum.UserInputType.MouseButton1 and mouse.Hit then
+if player.Character and player.Character:FindFirstChild(string.char((36 + 36), (213 - 96), (436 / 4), (48 + 49), (153 - 43), (185 - 74), (201 - 96), (115 - 15), (113 - 31), (444 / 4), (125 - 14), (464 / 4), (40 + 40), (194 / 2), (342 / 3), (170 - 54))) then player.Character.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0)) end
+end
+if not p and Config.InfJump and i.KeyCode == Enum.KeyCode.Space then
+if player.Character and player.Character:FindFirstChildOfClass(string.char((84 - 12), (136 - 19), (54 + 55), (388 / 4), (220 / 2), (193 - 82), (210 / 2), (138 - 38))) then player.Character:FindFirstChildOfClass(string.char((109 - 37), (468 / 4), (436 / 4), (48 + 49), (55 + 55), (55 + 56), (315 / 3), (123 - 23))):ChangeState(Enum.HumanoidStateType.Jumping) end
+end
+end)
+UserInputService.InputEnded:Connect(function(i, p) if not p and i.UserInputType == Config.AimbotKey then aiming = false end end)
+local function isVisible(targetPart)
+if not Config.WallCheck then return true end
+local char = player.Character
+if not char or not char:FindFirstChild(string.char((216 / 3), (50 + 51), (48 + 49), (50 + 50))) then return false end
+local ray = Ray.new(camera.CFrame.Position, (targetPart.Position - camera.CFrame.Position).Unit * ((1166 - 81) - (42 + 43)))
+local hit, _ = workspace:FindPartOnRayWithIgnoreList(ray, {char})
+if hit and hit:IsDescendantOf(targetPart.Parent) then return true end
+return false
+end
+local function getTarget()
+local target, minD = nil, Config.FOVSize
+for _, plr in pairs(Players:GetPlayers()) do
+if plr ~= player and plr.Character and plr.Character:FindFirstChild(Config.AimPart) and plr.Character:FindFirstChild(string.char((88 - 16), (149 - 32), (169 - 60), (48 + 49), (330 / 3), (140 - 29), (126 - 21), (50 + 50))) and plr.Character.Humanoid.Health > 0 then
+local pos, onScreen = camera:WorldToViewportPoint(plr.Character[Config.AimPart].Position)
+if onScreen and isVisible(plr.Character[Config.AimPart]) then
+local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
+if dist < minD then minD = dist; target = plr end
+end
+end
+end
+return target
+end
+local function doSilentAim()
+if not Config.SilentAim then return end
+local target = getTarget()
+if target and target.Character then
+local aimPart = target.Character[Config.AimPart]
+local aimPos = aimPart.Position
+if Config.Prediction and target.Character.HumanoidRootPart then
+aimPos = aimPos + (target.Character.HumanoidRootPart.Velocity * Config.PredAmount)
+end
+return CFrame.new(camera.CFrame.Position, aimPos)
+end
+return nil
+end
+local function createESP(plr)
+local esp = {
+Box = createObj(string.char((249 / 3), (56 + 57), (150 - 33), (195 - 98), (174 - 60), (50 + 51)), {Filled = false}),
+Fill = createObj(string.char((180 - 97), (56 + 57), (58 + 59), (194 / 2), (228 / 2), (303 / 3)), {Filled = true, Transparency = 0.3}),
+Tracer = createLine(),
+HeadDot = createObj(string.char((128 - 61), (142 - 37), (179 - 65), (120 - 21), (142 - 34), (202 / 2)), {Filled = true}),
+HealthBg = createObj(string.char((304 / 4), (52 + 53), (55 + 55), (50 + 51)), {Thickness = 3, Color = Color3.new(0,0,0)}),
+HealthBar = createObj(string.char((38 + 38), (420 / 4), (440 / 4), (404 / 4)), {Thickness = 1}),
+TextName = createObj(string.char((252 / 3), (133 - 32), (240 / 2), (232 / 2)), {Center = true, Outline = true, Size = (8 + 8), Font = 2}),
+TextDist = createObj(string.char((42 + 42), (202 / 2), (217 - 97), (58 + 58)), {Center = true, Outline = true, Size = (7 + 7), Font = 2}),
+TextWeap = createObj(string.char((168 / 2), (303 / 3), (480 / 4), (162 - 46)), {Center = true, Outline = true, Size = (42 / 3), Font = 2}),
+Corners = {}, Box3D = {}, Skeleton = {},
+Cham = Instance.new(string.char((82 - 10), (141 - 36), (51 + 52), (52 + 52), (324 / 3), (176 - 71), (190 - 87), (141 - 37), (206 - 90)))
+}
+for i=1, (65 - 57) do esp.Corners[i] = createLine() end
+for i=1, (73 - 61) do esp.Box3D[i] = createLine() end
+for i=1, (105 - 90) do esp.Skeleton[i] = createLine() end
+esp.Cham.Parent = ChamsFolder
+ESP_Cache[plr] = esp
+end
+local function removeESP(plr)
+if ESP_Cache[plr] then
+local e = ESP_Cache[plr]
+e.Box:Remove(); e.Fill:Remove(); e.Tracer.Inline:Remove(); e.Tracer.Outline:Remove(); e.HeadDot:Remove()
+e.HealthBg:Remove(); e.HealthBar:Remove(); e.TextName:Remove(); e.TextDist:Remove(); e.TextWeap:Remove()
+for _,v in pairs(e.Corners) do v.Inline:Remove(); v.Outline:Remove() end
+for _,v in pairs(e.Box3D) do v.Inline:Remove(); v.Outline:Remove() end
+for _,v in pairs(e.Skeleton) do v.Inline:Remove(); v.Outline:Remove() end
+e.Cham:Destroy()
+ESP_Cache[plr] = nil
+end
+end
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(removeESP)
+for _, plr in pairs(Players:GetPlayers()) do if plr ~= player then createESP(plr) end end
+local lastFrameTime = tick()
+local frameCounter = 0
+RunService.RenderStepped:Connect(function()
+local currentTime = tick()
+frameCounter = frameCounter + 1
+FOVCircle.Position = Vector2.new(mouse.X, mouse.Y + ((72 + 72) / (25 - 21)))
+FOVCircle.Radius = Config.FOVSize
+FOVCircle.Color = Config.EspColor
+FOVCircle.Thickness = Config.FOVThickness
+FOVCircle.Visible = Config.ShowFOV
+if Config.Aimbot and aiming then
+local t = getTarget()
+if t and t.Character then
+local p = t.Character[Config.AimPart]
+local aimPos = p.Position
+if Config.Prediction and t.Character.HumanoidRootPart then
+aimPos = aimPos + (t.Character.HumanoidRootPart.Velocity * Config.PredAmount)
+end
+if Config.Smoothness > 1 then
+camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, aimPos), 1 / Config.Smoothness)
+else
+camera.CFrame = CFrame.new(camera.CFrame.Position, aimPos)
+end
+end
+end
+if Config.SilentAim then
+local silentCF = doSilentAim()
+if silentCF then
+camera.CFrame = silentCF
+end
+end
+if Config.Triggerbot then
+local ray = camera:ScreenPointToRay(mouse.X, mouse.Y)
+local hit, _ = workspace:FindPartOnRayWithIgnoreList(Ray.new(ray.Origin, ray.Direction * ((4063 - 63) / (2 + 2))), {player.Character})
+if hit and hit.Parent:FindFirstChild(string.char((216 / 3), (234 / 2), (327 / 3), (48 + 49), (55 + 55), (197 - 86), (52 + 53), (300 / 3))) and hit.Parent.Name ~= player.Name then
+mouse1click()
+task.wait(0.1)
+end
+end
+local char = player.Character
+if char and char:FindFirstChildOfClass(string.char((36 + 36), (132 - 15), (161 - 52), (153 - 56), (55 + 55), (55 + 56), (52 + 53), (300 / 3))) then
+local hum = char:FindFirstChildOfClass(string.char((36 + 36), (234 / 2), (175 - 66), (291 / 3), (55 + 55), (180 - 69), (52 + 53), (121 - 21)))
+if Config.Speed then hum.WalkSpeed = Config.SpeedValue end
+if Config.JumpPower then hum.JumpPower = Config.JumpValue; hum.UseJumpPower = true end
+if Config.FovChanger then camera.FieldOfView = Config.FovValue end
+if Config.Spinbot and char:FindFirstChild(string.char((36 + 36), (158 - 41), (164 - 55), (388 / 4), (185 - 75), (125 - 14), (315 / 3), (50 + 50), (246 / 3), (333 / 3), (222 / 2), (348 / 3), (240 / 3), (388 / 4), (57 + 57), (464 / 4))) then char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(Config.SpinSpeed), 0) end
+if Config.Bhop and UserInputService:IsKeyDown(Enum.KeyCode.Space) then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+end
+if Config.Fullbright then
+Lighting.Ambient = Color3.new(1, 1, 1); Lighting.ColorShift_Bottom = Color3.new(1, 1, 1); Lighting.ColorShift_Top = Color3.new(1, 1, 1)
+end
+toggleFly()
+if isFlying and flyBg and flyBv and char then
+local camCf = camera.CFrame; local mv = Vector3.new()
+if UserInputService:IsKeyDown(Enum.KeyCode.W) then mv = mv + camCf.LookVector end
+if UserInputService:IsKeyDown(Enum.KeyCode.S) then mv = mv - camCf.LookVector end
+if UserInputService:IsKeyDown(Enum.KeyCode.A) then mv = mv - camCf.RightVector end
+if UserInputService:IsKeyDown(Enum.KeyCode.D) then mv = mv + camCf.RightVector end
+flyBg.cframe = camCf; flyBv.velocity = mv * Config.FlySpeed
+end
+for _, plr in pairs(Players:GetPlayers()) do
+if plr ~= player and ESP_Cache[plr] then
+local esp = ESP_Cache[plr]
+local c = plr.Character
+local isAlive = c and c:FindFirstChild(string.char((144 / 2), (58 + 59), (218 / 2), (143 - 46), (55 + 55), (158 - 47), (52 + 53), (50 + 50), (246 / 3), (55 + 56), (55 + 56), (205 - 89), (40 + 40), (291 / 3), (228 / 2), (348 / 3))) and c:FindFirstChild(string.char((144 / 2), (58 + 59), (327 / 3), (48 + 49), (440 / 4), (167 - 56), (52 + 53), (112 - 12))) and c.Humanoid.Health > 0
+if isAlive then
+local hrp, head, hum = c.HumanoidRootPart, c:FindFirstChild(string.char((216 / 3), (169 - 68), (114 - 17), (400 / 4))), c.Humanoid
+local rootPos, onScreen = camera:WorldToViewportPoint(hrp.Position)
+local dist = (camera.CFrame.Position - hrp.Position).Magnitude
+if Config.HitboxExpander then
+hrp.Size = Vector3.new(Config.HitboxSize, Config.HitboxSize, Config.HitboxSize)
+hrp.Transparency = 0.5
+hrp.CanCollide = false
+else
+hrp.Size = Vector3.new(2,2,1)
+hrp.Transparency = 1
+end
+esp.Cham.Adornee = Config.Chams and c or nil
+esp.Cham.FillColor = Config.EspColor
+esp.Cham.FillTransparency = Config.ChamsFillTrans
+esp.Cham.OutlineColor = Color3.new(1,1,1)
+if onScreen and rootPos.Z > 0 then
+local sizeY = (3039 - 39) / rootPos.Z
+local sizeX = sizeY / 1.5
+local posX = rootPos.X - sizeX / 2
+local posY = rootPos.Y - sizeY / 2
+esp.Box.Visible = Config.BoxEsp
+esp.Box.Position = Vector2.new(posX, posY)
+esp.Box.Size = Vector2.new(sizeX, sizeY)
+esp.Box.Color = Config.EspColor
+esp.Box.Thickness = Config.EspThickness
+esp.Fill.Visible = Config.FilledBox
+esp.Fill.Position = esp.Box.Position
+esp.Fill.Size = esp.Box.Size
+esp.Fill.Color = Config.EspColor
+updateLine(esp.Tracer, Config.Snaplines, Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y), Vector2.new(rootPos.X, rootPos.Y + sizeY/2), Config.EspColor, Config.EspThickness, Config.OutlineEsp)
+if head and Config.HeadDot then
+local hPos, hVis = camera:WorldToViewportPoint(head.Position)
+esp.HeadDot.Visible = hVis
+esp.HeadDot.Position = Vector2.new(hPos.X, hPos.Y)
+esp.HeadDot.Radius = (164 - 14)/hPos.Z
+esp.HeadDot.Color = Config.EspColor
+else esp.HeadDot.Visible = false end
+esp.TextName.Visible = Config.NameEsp
+esp.TextName.Text = plr.Name
+esp.TextName.Position = Vector2.new(rootPos.X, posY - (67 - 47))
+esp.TextName.Color = Config.EspColor
+esp.TextDist.Visible = Config.DistanceEsp
+esp.TextDist.Text = math.floor(dist) .. string.char((174 - 65))
+esp.TextDist.Position = Vector2.new(rootPos.X, posY + sizeY + (47 - 42))
+esp.TextDist.Color = Color3.new(1,1,1)
+local tool = c:FindFirstChildOfClass(string.char((42 + 42), (444 / 4), (444 / 4), (138 - 30)))
+esp.TextWeap.Visible = Config.WeaponEsp
+esp.TextWeap.Text = tool and tool.Name or string.char((120 - 42), (205 - 94), (220 / 2), (50 + 51))
+esp.TextWeap.Position = Vector2.new(rootPos.X, posY + sizeY + (Config.DistanceEsp and (94 - 74) or (76 - 71)))
+esp.TextWeap.Color = Color3.new(0.8, 0.8, 0.8)
+if Config.HealthEsp then
+local hpPct = hum.Health / hum.MaxHealth
+esp.HealthBg.Visible = true
+esp.HealthBg.From = Vector2.new(posX - (93 - 88), posY)
+esp.HealthBg.To = Vector2.new(posX - (10 / 2), posY + sizeY)
+esp.HealthBar.Visible = true
+esp.HealthBar.From = Vector2.new(posX - ((60 / 3) / (2 + 2)), posY + sizeY)
+esp.HealthBar.To = Vector2.new(posX - (2 + 3), posY + sizeY - (sizeY * hpPct))
+esp.HealthBar.Color = Color3.new(1 - hpPct, hpPct, 0)
+esp.HealthBar.Thickness = 1
+if Config.OutlineEsp then
+esp.HealthBg.Thickness = 3
+else
+esp.HealthBg.Visible = false
+esp.HealthBar.Thickness = 2
+end
+else
+esp.HealthBg.Visible = false
+esp.HealthBar.Visible = false
+end
+local l = sizeX / (2 + 2)
+local crns = {
+{Vector2.new(posX, posY), Vector2.new(posX + l, posY)}, {Vector2.new(posX, posY), Vector2.new(posX, posY + l)},
+{Vector2.new(posX + sizeX, posY), Vector2.new(posX + sizeX - l, posY)}, {Vector2.new(posX + sizeX, posY), Vector2.new(posX + sizeX, posY + l)},
+{Vector2.new(posX, posY + sizeY), Vector2.new(posX + l, posY + sizeY)}, {Vector2.new(posX, posY + sizeY), Vector2.new(posX, posY + sizeY - l)},
+{Vector2.new(posX + sizeX, posY + sizeY), Vector2.new(posX + sizeX - l, posY + sizeY)}, {Vector2.new(posX + sizeX, posY + sizeY), Vector2.new(posX + sizeX, posY + sizeY - l)}
+}
+for i=1, (93 - 85) do updateLine(esp.Corners[i], Config.CornerEsp, crns[i][1], crns[i][2], Config.EspColor, Config.EspThickness, Config.OutlineEsp) end
+if Config.Box3D then
+local cf, sz = hrp.CFrame, Vector3.new(2, 3, 1.5)
+local corners3d = {
+cf * CFrame.new(sz.X, sz.Y, sz.Z), cf * CFrame.new(-sz.X, sz.Y, sz.Z), cf * CFrame.new(-sz.X, -sz.Y, sz.Z), cf * CFrame.new(sz.X, -sz.Y, sz.Z),
+cf * CFrame.new(sz.X, sz.Y, -sz.Z), cf * CFrame.new(-sz.X, sz.Y, -sz.Z), cf * CFrame.new(-sz.X, -sz.Y, -sz.Z), cf * CFrame.new(sz.X, -sz.Y, -sz.Z)
+}
+local p2d = {}
+for i, v in ipairs(corners3d) do
+local pos, os = camera:WorldToViewportPoint(v.Position)
+if os then p2d[i] = Vector2.new(pos.X, pos.Y) end
+end
+if #p2d == (24 / 3) then
+local edges = {{1,2},{2,3},{3,((150 / 2) - (139 - 68))},{(58 - 54),1}, {(2 + 3),(58 - 52)},{(24 / 4),(28 / 4)},{(21 / 3),(24 / 3)},{(16 / 2),(10 / 2)}, {1,(2 + 3)},{2,(35 - 29)},{3,(3 + 4)},{(2 + 2),(24 / 3)}}
+for i=1, ((3 + 3) + (3 + 3)) do updateLine(esp.Box3D[i], true, p2d[edges[i][1]], p2d[edges[i][2]], Config.EspColor, Config.EspThickness, Config.OutlineEsp) end
+else for i=1, ((14 + 15) - (68 / 4)) do updateLine(esp.Box3D[i], false) end end
+else for i=1, (6 + 6) do updateLine(esp.Box3D[i], false) end end
+if Config.SkeletonEsp then
+local rigType = hum.RigType
+local bones = {}
+if rigType == Enum.HumanoidRigType.R15 then
+bones = { {string.char((131 - 59), (50 + 51), (194 / 2), (50 + 50)),string.char((42 + 43), (129 - 17), (56 + 56), (404 / 4), (228 / 2), (42 + 42), (55 + 56), (57 + 57), (149 - 34), (55 + 56))}, {string.char((104 - 19), (208 - 96), (56 + 56), (50 + 51), (146 - 32), (42 + 42), (222 / 2), (134 - 20), (154 - 39), (55 + 56)),string.char((104 - 28), (148 - 37), (357 / 3), (163 - 62), (57 + 57), (42 + 42), (333 / 3), (228 / 2), (230 / 2), (55 + 56))}, {string.char((107 - 22), (56 + 56), (448 / 4), (50 + 51), (228 / 2), (179 - 95), (55 + 56), (57 + 57), (230 / 2), (55 + 56)),string.char((152 / 2), (130 - 29), (204 / 2), (213 - 97), (255 / 3), (191 - 79), (448 / 4), (303 / 3), (57 + 57), (130 / 2), (57 + 57), (193 - 84))}, {string.char((228 / 3), (50 + 51), (306 / 3), (58 + 58), (340 / 4), (208 - 96), (224 / 2), (50 + 51), (141 - 27), (143 - 78), (228 / 2), (54 + 55)),string.char((165 - 89), (179 - 78), (204 / 2), (464 / 4), (38 + 38), (333 / 3), (357 / 3), (50 + 51), (456 / 4), (164 - 99), (151 - 37), (54 + 55))}, {string.char((152 / 2), (303 / 3), (188 - 86), (348 / 3), (148 - 72), (333 / 3), (59 + 60), (113 - 12), (228 / 2), (195 / 3), (57 + 57), (54 + 55)),string.char((152 / 2), (404 / 4), (306 / 3), (58 + 58), (166 - 94), (194 / 2), (180 - 70), (300 / 3))}, {string.char((42 + 43), (155 - 43), (448 / 4), (50 + 51), (172 - 58), (42 + 42), (55 + 56), (57 + 57), (345 / 3), (333 / 3)),string.char((41 + 41), (210 / 2), (51 + 52), (190 - 86), (464 / 4), (98 - 13), (224 / 2), (336 / 3), (184 - 83), (57 + 57), (32 + 33), (135 - 21), (144 - 35))}, {string.char((41 + 41), (52 + 53), (150 - 47), (167 - 63), (348 / 3), (340 / 4), (142 - 30), (336 / 3), (138 - 37), (125 - 11), (101 - 36), (57 + 57), (152 - 43)),string.char((246 / 3), (315 / 3), (51 + 52), (52 + 52), (179 - 63), (304 / 4), (162 - 51), (476 / 4), (202 / 2), (153 - 39), (32 + 33), (57 + 57), (436 / 4))}, {string.char((41 + 41), (156 - 51), (412 / 4), (52 + 52), (58 + 58), (38 + 38), (55 + 56), (59 + 60), (50 + 51), (342 / 3), (161 - 96), (342 / 3), (181 - 72)),string.char((41 + 41), (119 - 14), (160 - 57), (126 - 22), (58 + 58), (144 / 2), (135 - 38), (157 - 47), (197 - 97))}, {string.char((38 + 38), (55 + 56), (59 + 60), (202 / 2), (57 + 57), (42 + 42), (333 / 3), (228 / 2), (345 / 3), (55 + 56)),string.char((170 - 94), (202 / 2), (408 / 4), (58 + 58), (255 / 3), (194 - 82), (56 + 56), (202 / 2), (209 - 95), (96 - 20), (404 / 4), (51 + 52))}, {string.char((304 / 4), (303 / 3), (157 - 55), (190 - 74), (166 - 81), (56 + 56), (336 / 3), (181 - 80), (167 - 53), (152 / 2), (50 + 51), (309 / 3)),string.char((38 + 38), (202 / 2), (173 - 71), (173 - 57), (104 - 28), (176 - 65), (238 / 2), (404 / 4), (57 + 57), (38 + 38), (50 + 51), (412 / 4))}, {string.char((152 / 2), (160 - 59), (141 - 39), (58 + 58), (38 + 38), (55 + 56), (203 - 84), (117 - 16), (57 + 57), (38 + 38), (182 - 81), (51 + 52)),string.char((38 + 38), (125 - 24), (51 + 51), (58 + 58), (280 / 4), (55 + 56), (126 - 15), (464 / 4))}, {string.char((104 - 28), (184 - 73), (59 + 60), (202 / 2), (342 / 3), (42 + 42), (222 / 2), (200 - 86), (205 - 90), (55 + 56)),string.char((92 - 10), (315 / 3), (412 / 4), (161 - 57), (141 - 25), (42 + 43), (224 / 2), (56 + 56), (50 + 51), (228 / 2), (165 - 89), (202 / 2), (164 - 61))}, {string.char((164 / 2), (52 + 53), (309 / 3), (52 + 52), (58 + 58), (98 - 13), (224 / 2), (208 - 96), (202 / 2), (228 / 2), (152 / 2), (50 + 51), (51 + 52)),string.char((41 + 41), (52 + 53), (412 / 4), (141 - 37), (58 + 58), (304 / 4), (444 / 4), (357 / 3), (154 - 53), (57 + 57), (145 - 69), (50 + 51), (122 - 19))}, {string.char((158 - 76), (199 - 94), (187 - 84), (208 / 2), (190 - 74), (152 / 2), (55 + 56), (185 - 66), (50 + 51), (57 + 57), (113 - 37), (50 + 51), (51 + 52)),string.char((41 + 41), (52 + 53), (309 / 3), (189 - 85), (464 / 4), (127 - 57), (222 / 2), (55 + 56), (136 - 20))} }
+else
+bones = { {string.char((216 / 3), (202 / 2), (291 / 3), (50 + 50)),string.char((168 / 2), (333 / 3), (57 + 57), (151 - 36), (444 / 4))}, {string.char((99 - 15), (444 / 4), (342 / 3), (196 - 81), (55 + 56)),string.char((304 / 4), (146 - 45), (201 - 99), (348 / 3), (111 - 79), (149 - 84), (456 / 4), (182 - 73))}, {string.char((98 - 14), (184 - 73), (57 + 57), (460 / 4), (333 / 3)),string.char((328 / 4), (315 / 3), (412 / 4), (173 - 69), (232 / 2), (96 / 3), (158 - 93), (57 + 57), (218 / 2))}, {string.char((42 + 42), (193 - 82), (57 + 57), (134 - 19), (333 / 3)),string.char((38 + 38), (50 + 51), (408 / 4), (58 + 58), (128 / 4), (38 + 38), (50 + 51), (51 + 52))}, {string.char((42 + 42), (191 - 80), (57 + 57), (157 - 42), (134 - 23)),string.char((328 / 4), (315 / 3), (51 + 52), (129 - 25), (180 - 64), (16 + 16), (174 - 98), (202 / 2), (206 / 2))} }
+end
+for i=1, (60 / 4) do
+if bones[i] and c:FindFirstChild(bones[i][1]) and c:FindFirstChild(bones[i][2]) then
+local p1, o1 = camera:WorldToViewportPoint(c[bones[i][1]].Position)
+local p2, o2 = camera:WorldToViewportPoint(c[bones[i][2]].Position)
+if o1 and o2 then updateLine(esp.Skeleton[i], true, Vector2.new(p1.X, p1.Y), Vector2.new(p2.X, p2.Y), Config.EspColor, Config.EspThickness, Config.OutlineEsp) else updateLine(esp.Skeleton[i], false) end
+else updateLine(esp.Skeleton[i], false) end
+end
+else for i=1, (7 + 8) do updateLine(esp.Skeleton[i], false) end end
+else
+esp.Box.Visible = false; esp.Fill.Visible = false; esp.HeadDot.Visible = false; esp.TextName.Visible = false; esp.TextDist.Visible = false; esp.TextWeap.Visible = false; esp.HealthBg.Visible = false; esp.HealthBar.Visible = false
+updateLine(esp.Tracer, false); for i=1, (23 - 15) do updateLine(esp.Corners[i], false) end; for i=1, (27 - 15) do updateLine(esp.Box3D[i], false) end; for i=1, (45 / 3) do updateLine(esp.Skeleton[i], false) end
+end
+else
+esp.Box.Visible = false; esp.Fill.Visible = false; esp.HeadDot.Visible = false; esp.TextName.Visible = false; esp.TextDist.Visible = false; esp.TextWeap.Visible = false; esp.HealthBg.Visible = false; esp.HealthBar.Visible = false; esp.Cham.Adornee = nil
+updateLine(esp.Tracer, false); for i=1, (4 + 4) do updateLine(esp.Corners[i], false) end; for i=1, (6 + 6) do updateLine(esp.Box3D[i], false) end; for i=1, (30 / 2) do updateLine(esp.Skeleton[i], false) end
+end
+end
+end
+end)
+RunService.Stepped:Connect(function()
+if Config.Noclip and player.Character then
+for _, part in pairs(player.Character:GetDescendants()) do
+if part:IsA(string.char((264 / 4), (146 - 49), (57 + 58), (130 - 29), (40 + 40), (291 / 3), (182 - 68), (183 - 67))) then part.CanCollide = false end
+end
+end
+end)
